@@ -1,0 +1,127 @@
+/**
+ * Anti-Cheat & Canonical Result Validation for Practice Ground
+ * Reuses TypingBull's exact canonical WPM and accuracy formulas.
+ */
+
+import { MULTIPLAYER_CONSTANTS } from './types.ts';
+
+export interface ProgressValidationResult {
+  isValid: boolean;
+  validatedWpm: number;
+  validatedAccuracy: number;
+  validatedProgress: number;
+  isCompleted: boolean;
+  reason?: string;
+}
+
+export class ResultValidator {
+  /**
+   * Sanitizes user input display names to prevent XSS, HTML injection, or layout breakage.
+   */
+  static sanitizeDisplayName(rawName: string | undefined): string {
+    if (!rawName || typeof rawName !== 'string') {
+      return `Typist-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
+    // Strip HTML tags and non-printable control characters
+    const stripped = rawName.replace(/<[^>]*>/g, '');
+    const clean = Array.from(stripped)
+      .filter((c) => {
+        const code = c.charCodeAt(0);
+        return code >= 32 && code !== 127;
+      })
+      .join('')
+      .trim();
+
+    // Enforce 2 - 20 character length bounds
+    if (clean.length < 2) {
+      return `Typist-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
+    const truncated = clean.slice(0, 20);
+
+    // Screen for severe profanity / hate speech / slurs
+    const normalized = truncated
+      .toLowerCase()
+      .replace(/[@4]/g, 'a')
+      .replace(/[$5]/g, 's')
+      .replace(/[1!|]/g, 'i')
+      .replace(/[0]/g, 'o')
+      .replace(/[3]/g, 'e')
+      .replace(/[^a-z]/g, '')
+      .replace(/(.)\1{2,}/g, '$1$1');
+
+    const blockedWords = ['nigger', 'nigga', 'faggot', 'fag', 'kike', 'chink', 'spic', 'cunt', 'whore', 'slut', 'retard', 'hitler', 'nazi', 'pedophile', 'pedo', 'dickhead', 'motherfucker', 'asshole', 'bitch', 'fuck', 'shit', 'penis', 'vagina', 'dildo', 'cock', 'pussy'];
+    if (blockedWords.some((word) => normalized.includes(word))) {
+      return `Typist-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
+    return truncated;
+  }
+
+  /**
+   * Validates a player's real-time progress update against canonical race time and text length.
+   */
+  static validateProgress(
+    raceText: string,
+    raceStartAt: number,
+    correctChars: number,
+    incorrectChars: number,
+    totalChars: number,
+    clientCompleted: boolean,
+    now: number = Date.now()
+  ): ProgressValidationResult {
+    const elapsedMs = Math.max(100, now - raceStartAt);
+    const elapsedMinutes = elapsedMs / 60000;
+    const textLength = raceText.length;
+
+    // 1. Bound check: correct chars cannot exceed race text length
+    const boundedCorrect = Math.min(Math.max(0, correctChars), textLength);
+    const boundedIncorrect = Math.max(0, incorrectChars);
+    const calculatedTotal = Math.max(totalChars, boundedCorrect + boundedIncorrect);
+
+    // 2. Canonical TypingBull WPM formula:
+    // (correctChars / 5) / elapsedMinutes
+    const calculatedWpm = elapsedMinutes > 0
+      ? Math.round((boundedCorrect / 5) / elapsedMinutes)
+      : 0;
+
+    // 3. Canonical TypingBull Accuracy formula (0-100%, 1 decimal place):
+    const calculatedAccuracy = calculatedTotal > 0
+      ? Math.round((boundedCorrect / calculatedTotal) * 1000) / 10
+      : 100;
+
+    // 4. Progress percentage (0 - 100)
+    const calculatedProgress = Math.min(100, Math.round((boundedCorrect / textLength) * 100));
+
+    // 5. Anti-cheat check: Impossible typing speeds (> MAX_WPM_LIMIT e.g. 320 WPM)
+    // Allow small burst grace period in first 3.5 seconds (e.g. typing 1 short word fast)
+    if (elapsedMs > 3500 && calculatedWpm > MULTIPLAYER_CONSTANTS.MAX_WPM_LIMIT) {
+      return {
+        isValid: false,
+        validatedWpm: MULTIPLAYER_CONSTANTS.MAX_WPM_LIMIT,
+        validatedAccuracy: calculatedAccuracy,
+        validatedProgress: calculatedProgress,
+        isCompleted: false,
+        reason: 'Typing speed exceeds human feasibility threshold.',
+      };
+    }
+
+    // 6. Completion validation: client completes when full passage has been typed
+    // Allows completion with typos (real-world typing accuracy < 100%)
+    const hasTypedFullPassage =
+      totalChars >= textLength ||
+      (boundedCorrect + boundedIncorrect) >= textLength ||
+      boundedCorrect >= textLength;
+
+    const isActuallyCompleted = Boolean(clientCompleted && hasTypedFullPassage);
+
+    return {
+      isValid: true,
+      validatedWpm: calculatedWpm,
+      validatedAccuracy: calculatedAccuracy,
+      validatedProgress: calculatedProgress,
+      isCompleted: isActuallyCompleted,
+    };
+  }
+}
