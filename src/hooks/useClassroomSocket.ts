@@ -152,6 +152,9 @@ export function useClassroomSocket(initialRoomCode?: string) {
 
         case 'ROOM_UPDATED': {
           const updatedRoom = msg.payload.room;
+          if (updatedRoom.status === 'WAITING') {
+            setSessionResults(null);
+          }
           setRoom((prev) => {
             if (prev && sessionStorage.getItem(ROLE_KEY) === 'student') {
               const prevAssignments = prev.settings?.assignments || [];

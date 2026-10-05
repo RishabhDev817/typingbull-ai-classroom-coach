@@ -337,6 +337,8 @@ export class ClassroomServer {
               rank: student.rank || 1,
               wpm: student.wpm,
               accuracy: student.accuracy,
+              weakKeys: student.weakKeys,
+              topErrors: student.topErrors,
             },
           });
 

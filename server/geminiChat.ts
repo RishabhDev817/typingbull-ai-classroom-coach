@@ -83,6 +83,25 @@ COACHING GUIDELINES:
 5. Always stay in character as BullBot!`;
 }
 
+export const GEMINI_CANDIDATE_MODELS = [
+  'gemini-flash-latest',
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
+  'gemini-3.7-flash',
+  'gemini-3.1-flash-lite',
+];
+
+export function resolveGeminiApiKey(apiKey?: string): string {
+  const resolved =
+    apiKey ||
+    (typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : undefined);
+
+  if (!resolved) {
+    throw new Error('MISSING_API_KEY');
+  }
+  return resolved;
+}
+
 /**
  * Handle a chat request with Google Gemini API
  */
@@ -90,13 +109,7 @@ export async function handleGeminiChat(
   body: ChatRequestBody,
   apiKey?: string
 ): Promise<{ text: string }> {
-  const resolvedApiKey =
-    apiKey ||
-    (typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : undefined);
-
-  if (!resolvedApiKey) {
-    throw new Error('MISSING_API_KEY');
-  }
+  const resolvedApiKey = resolveGeminiApiKey(apiKey);
 
   const { chatHistory, userData } = body;
 

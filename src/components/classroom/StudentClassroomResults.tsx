@@ -5,6 +5,7 @@ import type { ClassroomResultsView } from '../../types/classroom';
 import { Mascot } from '../Mascot';
 import { ConfettiFireworks } from '../game/ConfettiFireworks';
 import { StudentAvatarBadge } from './StudentAvatar';
+import { StudentAIMicroCoachCard } from './StudentAIMicroCoachCard';
 
 interface Props {
   results: ClassroomResultsView;
@@ -112,6 +113,9 @@ export const StudentClassroomResults: React.FC<Props> = ({
             {results.classAverageWpm} WPM • {results.classAverageAccuracy}% Acc
           </span>
         </div>
+
+        {/* Personalized AI Micro-Coach */}
+        <StudentAIMicroCoachCard studentResult={myResult} results={results} />
 
         {/* Return Button */}
         <div className="pt-2 text-center">

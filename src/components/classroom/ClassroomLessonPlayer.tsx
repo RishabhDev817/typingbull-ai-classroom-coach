@@ -19,6 +19,7 @@ import { KeyboardDiagram } from '../keyboard/KeyboardDiagram';
 import { soundEngine } from '../../utils/audio';
 import { Mascot } from '../Mascot';
 import type { MascotMood } from '../Mascot';
+import { extractSessionWeakKeys } from '../../engine/weakKeyAnalyzer';
 import type { StudentProgressUpdate, StudentFinishPayload, ClassroomAssignment } from '../../types/classroom';
 
 interface Props {
@@ -181,6 +182,11 @@ export const ClassroomLessonPlayer: React.FC<Props> = ({
       const finalWpm = result?.wpm ?? liveWpm;
       const finalAcc = result?.accuracy ?? liveAccuracy;
 
+      const { weakKeys, topErrors } = extractSessionWeakKeys(
+        result?.perKeyErrors || {},
+        result?.perKeyTotal || {}
+      );
+
       soundEngine.playVictory();
       setLessonState('completed');
 
@@ -192,6 +198,8 @@ export const ClassroomLessonPlayer: React.FC<Props> = ({
           incorrectChars: errors.size,
           totalChars: content.length,
           timeSpentSec: Math.max(1, Math.round((result?.durationMs ?? engine.metrics.elapsedMs) / 1000)),
+          weakKeys,
+          topErrors,
         },
         currentLesson.id,
         currentAssignment?.assignmentId
@@ -231,6 +239,8 @@ export const ClassroomLessonPlayer: React.FC<Props> = ({
         incorrectChars: 0,
         totalChars: 20,
         timeSpentSec: 10,
+        weakKeys: [],
+        topErrors: [],
       },
       currentLesson.id,
       currentAssignment?.assignmentId

@@ -385,6 +385,20 @@ export const ClassroomPage: React.FC = () => {
                       assignedAt: Date.now(),
                     });
                   }}
+                  onLaunchAdaptiveDrill={(drill) => {
+                    updateSettings({
+                      activityType: 'practice',
+                      session_type: 'passage',
+                      passageId: `adaptive-${Date.now()}`,
+                      passageTitle: drill.title,
+                      targetText: drill.text,
+                      targetKeys: drill.focusKeys,
+                      durationSeconds: drill.durationSeconds,
+                      lesson_id: undefined,
+                      assignmentCategory: 'ai-adaptive-drill',
+                      teacherNote: drill.reason,
+                    });
+                  }}
                 />
 
                 <ClassroomTargetSelectorModal

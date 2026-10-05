@@ -74,9 +74,9 @@ export class ClassroomManager {
 
   /** Sanitize student display names to prevent XSS and layout issues */
   public sanitizeName(raw: string): string {
-    if (!raw) return 'Student';
+    if (!raw || typeof raw !== 'string') return 'Student';
     // Remove HTML tags, special control chars, collapse spaces
-    const clean = raw.replace(/<[^>]*>?/gm, '').replace(/[^\p{L}\p{N}\s_\-]/gu, '').trim();
+    const clean = raw.replace(/<[^>]*>?/gm, '').replace(/[^\p{L}\p{N}\s_-]/gu, '').trim();
     if (!clean || clean.length < 2) return 'Student';
     const truncated = clean.slice(0, 20);
 
@@ -278,6 +278,8 @@ export class ClassroomManager {
         student.totalChars = 0;
         student.finishedAt = undefined;
         student.rank = undefined;
+        student.weakKeys = undefined;
+        student.topErrors = undefined;
       }
     } else if (room.status === 'ACTIVE') {
       // While ACTIVE, teacher can add/reorder upcoming assignments, but cannot modify active typing target
@@ -415,6 +417,8 @@ export class ClassroomManager {
       student.totalChars = 0;
       student.finishedAt = undefined;
       student.rank = undefined;
+      student.weakKeys = undefined;
+      student.topErrors = undefined;
     }
 
     room.lastActivityAt = now;
@@ -496,6 +500,12 @@ export class ClassroomManager {
       student.incorrectChars = payload.incorrectChars;
       student.totalChars = payload.totalChars;
       student.finishedAt = Date.now();
+      if (payload.weakKeys && Array.isArray(payload.weakKeys)) {
+        student.weakKeys = payload.weakKeys.slice(0, 5);
+      }
+      if (payload.topErrors && Array.isArray(payload.topErrors)) {
+        student.topErrors = payload.topErrors.slice(0, 5);
+      }
 
       // Assign rank based on finish order for this active round
       const finishedCount = Object.values(room.students).filter((s) => s.status === 'FINISHED').length;
@@ -555,6 +565,8 @@ export class ClassroomManager {
         accuracy: s.accuracy,
         finished: isCompleted,
         timeSpentSec,
+        weakKeys: s.weakKeys,
+        topErrors: s.topErrors,
       };
     });
 
@@ -632,6 +644,8 @@ export class ClassroomManager {
       currentAssignmentIndex: student.currentAssignmentIndex,
       completedLessonIds: student.completedLessonIds || [],
       assignmentProgress: student.assignmentProgress || {},
+      weakKeys: student.weakKeys,
+      topErrors: student.topErrors,
     };
   }
 

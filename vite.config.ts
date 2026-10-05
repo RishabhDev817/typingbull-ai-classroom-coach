@@ -4,6 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { resolve } from 'node:path'
 import { handleGeminiChat, type ChatRequestBody } from './server/geminiChat.ts'
+import { handleClassroomDebrief } from './server/classroomDebrief.ts'
+import { handleAdaptiveDrill } from './server/classroomAdaptiveDrill.ts'
+import { handleStudentCoach } from './server/classroomStudentCoach.ts'
+import type { ClassroomDebriefRequest, AdaptiveDrillRequest, ClassroomStudentCoachRequest } from './server/classroom/types.ts'
 import { MultiplayerServer } from './server/multiplayer/multiplayerServer.ts'
 import { ClassroomServer } from './server/classroom/ClassroomServer.ts'
 
@@ -87,6 +91,108 @@ function geminiDevApiPlugin(): Plugin {
               JSON.stringify({
                 error: errMsg,
                 message: "Oops, my circuits crossed. Let's try that again!",
+              })
+            );
+          }
+        });
+        return;
+      }
+
+      if (req.url === '/api/classroom/debrief' && req.method === 'POST') {
+        let rawBody = '';
+        req.on('data', (chunk: Buffer) => {
+          rawBody += chunk.toString();
+        });
+        req.on('end', async () => {
+          res.setHeader('Content-Type', 'application/json');
+          try {
+            const body: ClassroomDebriefRequest = JSON.parse(rawBody || '{}');
+            const env = loadEnv(mode, process.cwd(), '');
+            const apiKey = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+
+            if (!apiKey) {
+              console.warn('[Vite Dev API] GEMINI_API_KEY is not set in .env');
+              res.statusCode = 500;
+              res.end(
+                JSON.stringify({
+                  error: 'MISSING_API_KEY',
+                  message: 'Gemini API key is not configured for Classroom Debrief.',
+                })
+              );
+              return;
+            }
+
+            const debrief = await handleClassroomDebrief(body, apiKey);
+            res.statusCode = 200;
+            res.end(JSON.stringify(debrief));
+          } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.error('[Vite Dev Classroom Debrief Error]:', errMsg);
+            res.statusCode = 500;
+            res.end(
+              JSON.stringify({
+                error: errMsg,
+                message: 'Failed to generate classroom debrief report.',
+              })
+            );
+          }
+        });
+        return;
+      }
+
+      if (req.url === '/api/classroom/adaptive-drill' && req.method === 'POST') {
+        let rawBody = '';
+        req.on('data', (chunk: Buffer) => {
+          rawBody += chunk.toString();
+        });
+        req.on('end', async () => {
+          res.setHeader('Content-Type', 'application/json');
+          try {
+            const body: AdaptiveDrillRequest = JSON.parse(rawBody || '{}');
+            const env = loadEnv(mode, process.cwd(), '');
+            const apiKey = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+
+            const drill = await handleAdaptiveDrill(body, apiKey);
+            res.statusCode = 200;
+            res.end(JSON.stringify(drill));
+          } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.error('[Vite Dev Adaptive Drill Error]:', errMsg);
+            res.statusCode = 500;
+            res.end(
+              JSON.stringify({
+                error: errMsg,
+                message: 'Failed to synthesize adaptive drill.',
+              })
+            );
+          }
+        });
+        return;
+      }
+
+      if (req.url === '/api/classroom/student-coach' && req.method === 'POST') {
+        let rawBody = '';
+        req.on('data', (chunk: Buffer) => {
+          rawBody += chunk.toString();
+        });
+        req.on('end', async () => {
+          res.setHeader('Content-Type', 'application/json');
+          try {
+            const body: ClassroomStudentCoachRequest = JSON.parse(rawBody || '{}');
+            const env = loadEnv(mode, process.cwd(), '');
+            const apiKey = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+
+            const coach = await handleStudentCoach(body, apiKey);
+            res.statusCode = 200;
+            res.end(JSON.stringify(coach));
+          } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.error('[Vite Dev Student Coach Error]:', errMsg);
+            res.statusCode = 500;
+            res.end(
+              JSON.stringify({
+                error: errMsg,
+                message: 'Failed to generate student coach feedback.',
               })
             );
           }

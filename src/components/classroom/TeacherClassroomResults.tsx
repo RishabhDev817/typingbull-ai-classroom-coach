@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Trophy, Zap, Target, RotateCcw, LogOut, CheckCircle2, Plus, Sparkles, AlertCircle } from 'lucide-react';
-import type { ClassroomResultsView, ClassroomRoomView, ClassroomAssignment } from '../../types/classroom';
+import type { ClassroomResultsView, ClassroomRoomView, ClassroomAssignment, AdaptiveDrillResponse } from '../../types/classroom';
 import { Mascot } from '../Mascot';
 import { ClassroomEndModal } from './ClassroomEndModal';
 import { StudentAvatarBadge } from './StudentAvatar';
+import { AIClassroomDebriefCard } from './AIClassroomDebriefCard';
 
 interface Props {
   results: ClassroomResultsView;
@@ -12,6 +13,7 @@ interface Props {
   onEndClassroom: () => void;
   onOpenAssignModal?: () => void;
   onActivateAssignment?: (assignment: ClassroomAssignment) => void;
+  onLaunchAdaptiveDrill?: (drill: AdaptiveDrillResponse) => void;
 }
 
 export const TeacherClassroomResults: React.FC<Props> = ({
@@ -21,6 +23,7 @@ export const TeacherClassroomResults: React.FC<Props> = ({
   onEndClassroom,
   onOpenAssignModal,
   onActivateAssignment,
+  onLaunchAdaptiveDrill,
 }) => {
   const [showEndModal, setShowEndModal] = useState(false);
 
@@ -179,6 +182,13 @@ export const TeacherClassroomResults: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* ─── AI CLASSROOM DEBRIEF (GOOGLE GEMINI COACH) ─── */}
+      <AIClassroomDebriefCard
+        results={results}
+        room={room}
+        onLaunchAdaptiveDrill={onLaunchAdaptiveDrill}
+      />
 
       {/* ─── TEACHER CLASSROOM INSIGHTS & PRACTICE RECOMMENDATIONS ─── */}
       <div className="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">

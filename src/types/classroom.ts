@@ -65,6 +65,8 @@ export interface ClassroomStudentView {
   finishedAt?: number;
   currentAssignmentIndex?: number;
   completedLessonIds?: number[];
+  weakKeys?: string[];
+  topErrors?: string[];
   assignmentProgress?: Record<string, {
     status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
     progress: number;
@@ -98,6 +100,8 @@ export interface ClassroomResultItem {
   accuracy: number;
   finished: boolean;
   timeSpentSec: number;
+  weakKeys?: string[];
+  topErrors?: string[];
 }
 
 export interface ClassroomResultsView {
@@ -131,6 +135,8 @@ export interface StudentFinishPayload {
   lessonId?: number;
   assignmentId?: string;
   isCompleted?: boolean;
+  weakKeys?: string[];
+  topErrors?: string[];
 }
 
 export type ClientMessage =
@@ -155,9 +161,133 @@ export type ServerMessage =
   | { type: 'SESSION_START_SCHEDULED'; payload: { countdownStartAt: number; sessionStartAt: number; sessionEndAt: number; settings: ClassroomSettings } }
   | { type: 'SESSION_STARTED'; payload: { sessionStartAt: number; sessionEndAt: number } }
   | { type: 'STUDENT_PROGRESS_BROADCAST'; payload: { studentId: string; progress: number; wpm: number; accuracy: number; finished: boolean } }
-  | { type: 'STUDENT_FINISHED_BROADCAST'; payload: { studentId: string; studentName: string; rank: number; wpm: number; accuracy: number } }
+  | { type: 'STUDENT_FINISHED_BROADCAST'; payload: { studentId: string; studentName: string; rank: number; wpm: number; accuracy: number; weakKeys?: string[]; topErrors?: string[] } }
   | { type: 'SESSION_FINISHED'; payload: { results: ClassroomResultsView } }
   | { type: 'CLASSROOM_ENDED'; payload: { reason: string } }
   | { type: 'RECONNECT_SUCCESS'; payload: { role: 'teacher' | 'student'; studentId?: string; room: ClassroomRoomView } }
   | { type: 'ERROR'; payload: { code: string; message: string } }
   | { type: 'PONG'; payload?: { timestamp?: number } };
+
+// ─── AI Classroom Debrief Types ───
+export interface ClassroomDebriefStudentInput {
+  name?: string;
+  wpm: number;
+  accuracy: number;
+  completed?: boolean;
+  timeSpentSec?: number;
+  weakKeys?: string[];
+  topErrors?: string[];
+}
+
+export interface ClassroomDebriefRequest {
+  session: {
+    passageTitle?: string;
+    lessonTitle?: string;
+    targetWPM?: number;
+    durationSeconds?: number;
+    studentCount?: number;
+    classAverageWpm?: number;
+    classAverageAccuracy?: number;
+  };
+  students: ClassroomDebriefStudentInput[];
+}
+
+export interface ClassroomPriorityArea {
+  area: string;
+  reason: string;
+  affectedStudents: number;
+}
+
+export interface ClassroomStudentGroup {
+  group: 'Velocity Masters' | 'Precision Anchors' | 'Developing Typists' | 'Needs Support' | string;
+  description: string;
+  count: number;
+}
+
+export interface ClassroomDebriefResponse {
+  classHealthScore: number;
+  summary: string;
+  keyTakeaway: string;
+  strengths: string[];
+  priorityAreas: ClassroomPriorityArea[];
+  studentGroups: ClassroomStudentGroup[];
+  recommendedNextStep: string;
+  recommendedFocusKeys: string[];
+}
+
+// ─── Adaptive Drill Synthesizer Types ───
+export interface AdaptiveDrillStudentInput {
+  name?: string;
+  wpm?: number;
+  accuracy?: number;
+  completed?: boolean;
+  timeSpentSec?: number;
+  weakKeys?: string[];
+  topErrors?: string[];
+}
+
+export interface AdaptiveDrillSessionContext {
+  passageTitle?: string;
+  lessonTitle?: string;
+  targetWPM?: number;
+  durationSeconds?: number;
+  classAverageWpm?: number;
+  classAverageAccuracy?: number;
+  studentCount?: number;
+}
+
+export interface AdaptiveDrillRequest {
+  session?: AdaptiveDrillSessionContext;
+  students?: AdaptiveDrillStudentInput[];
+  focusKeys?: string[];
+  durationSeconds?: number;
+  targetWPM?: number;
+  preferredLayer?: 'keys' | 'words' | 'sentences' | 'hybrid';
+}
+
+export interface AdaptiveDrillResponse {
+  title: string;
+  instructions: string;
+  text: string;
+  focusKeys: string[];
+  durationSeconds: number;
+  targetWPM: number;
+  reason: string;
+  difficulty: 'foundational' | 'targeted' | 'advanced' | string;
+  layer?: 'keys' | 'words' | 'sentences' | 'hybrid' | string;
+}
+
+// ─── Student AI Micro-Coach Types ───
+export interface ClassroomStudentCoachStudentInput {
+  wpm: number;
+  accuracy: number;
+  completed?: boolean;
+  weakKeys?: string[];
+  topErrors?: string[];
+  timeSpentSec?: number;
+}
+
+export interface ClassroomStudentCoachSessionInput {
+  lessonTitle?: string;
+  passageTitle?: string;
+  targetWPM?: number;
+  durationSeconds?: number;
+  classAverageWpm?: number;
+  classAverageAccuracy?: number;
+}
+
+export interface ClassroomStudentCoachRequest {
+  student: ClassroomStudentCoachStudentInput;
+  session?: ClassroomStudentCoachSessionInput;
+}
+
+export interface ClassroomStudentCoachResponse {
+  headline: string;
+  message: string;
+  strength: string;
+  focusKeys: string[];
+  nextAction: string;
+  encouragement: string;
+}
+
+

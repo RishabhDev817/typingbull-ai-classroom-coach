@@ -158,3 +158,38 @@ export function analyzeWeakKeys(lang: SupportedLocale = 'en'): WeakKeyRecommenda
     mission,
   };
 }
+
+/**
+ * Extract top error keys and weak keys from session per-key error/total records.
+ * Reuses existing error-rate and error-count diagnostic logic for lightweight classroom telemetry.
+ */
+export function extractSessionWeakKeys(
+  perKeyErrors: Record<string, number>,
+  perKeyTotal: Record<string, number>,
+  limit: number = 5
+): { weakKeys: string[]; topErrors: string[] } {
+  // topErrors: sorted by raw error count descending
+  const errorEntries = Object.entries(perKeyErrors)
+    .filter(([_, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  const topErrors = errorEntries.slice(0, limit).map(([key]) => key);
+
+  // weakKeys: sorted by error rate (errors / total) with error count tiebreaker
+  const rateEntries = errorEntries
+    .map(([key, errors]) => {
+      const total = perKeyTotal[key] || errors;
+      const errorRate = total > 0 ? errors / total : 0;
+      return { key, errorRate, errors };
+    })
+    .sort((a, b) => {
+      if (b.errorRate !== a.errorRate) {
+        return b.errorRate - a.errorRate;
+      }
+      return b.errors - a.errors;
+    });
+
+  const weakKeys = rateEntries.slice(0, limit).map((e) => e.key);
+
+  return { weakKeys, topErrors };
+}

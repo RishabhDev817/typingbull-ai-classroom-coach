@@ -4,6 +4,7 @@ import { Clock, Zap, Target, CheckCircle2 } from 'lucide-react';
 import { soundEngine } from '../../utils/audio';
 import { KeyboardDiagram } from '../keyboard/KeyboardDiagram';
 import { getLessonById } from '../../data/lessonData';
+import { extractSessionWeakKeys } from '../../engine/weakKeyAnalyzer';
 import type { StudentProgressUpdate, StudentFinishPayload, ClassroomSessionType } from '../../types/classroom';
 
 interface Props {
@@ -45,6 +46,8 @@ export const ClassroomTypingArea: React.FC<Props> = ({
   const textContainerRef = useRef<HTMLDivElement>(null);
   const activeCharRef = useRef<HTMLSpanElement>(null);
   const isFinishedRef = useRef<boolean>(false);
+  const keyErrorsRef = useRef<Record<string, number>>({});
+  const keyTotalsRef = useRef<Record<string, number>>({});
 
   const isCurriculum = session_type === 'curriculum' || assignmentCategory === 'learn-curriculum' || Boolean(lesson_id);
   const canonicalLesson = lesson_id ? getLessonById(Number(lesson_id)) : undefined;
@@ -127,6 +130,11 @@ export const ClassroomTypingArea: React.FC<Props> = ({
       soundEngine.playVictory();
     }
 
+    const { weakKeys, topErrors } = extractSessionWeakKeys(
+      keyErrorsRef.current,
+      keyTotalsRef.current
+    );
+
     onFinish({
       wpm: finalWpm,
       accuracy: finalAccuracy,
@@ -137,6 +145,8 @@ export const ClassroomTypingArea: React.FC<Props> = ({
       lessonId: lesson_id ? Number(lesson_id) : undefined,
       assignmentId,
       isCompleted,
+      weakKeys,
+      topErrors,
     });
   }, [userInput.length, mistakesCount, sessionStartAt, totalKeystrokes, onFinish, totalChars, lesson_id, assignmentId]);
 
@@ -155,9 +165,17 @@ export const ClassroomTypingArea: React.FC<Props> = ({
       const typedChar = value[charIndex];
       const expectedChar = safeTargetText[charIndex];
 
+      const lowerExpected = expectedChar ? expectedChar.toLowerCase() : '';
+      if (lowerExpected && /^[a-z0-9;',./\[\]\\=\-`]$/.test(lowerExpected)) {
+        keyTotalsRef.current[lowerExpected] = (keyTotalsRef.current[lowerExpected] || 0) + 1;
+      }
+
       if (typedChar === expectedChar) {
         soundEngine.playClick(typedChar === ' ');
       } else {
+        if (lowerExpected && /^[a-z0-9;',./\[\]\\=\-`]$/.test(lowerExpected)) {
+          keyErrorsRef.current[lowerExpected] = (keyErrorsRef.current[lowerExpected] || 0) + 1;
+        }
         newMistakesCount += 1;
         setMistakesCount(newMistakesCount);
         soundEngine.playError();
